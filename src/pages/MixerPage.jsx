@@ -38,24 +38,24 @@ const MixerPage = () => {
           Professional 4-Track Mixer
         </h1>
         <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-          Mix real professional audio stems from Google Drive: Kick Drum, Drum Overheads, Bass, and Vocals. 
+          Mix realistic musical loops: Full Drum Kit, Bass Line, Vocal Melody, and String Pad. 
           Experience studio-quality mixing with full EQ, panning, and level control.
         </p>
-        
+
         {/* Audio Notice */}
         <div className="mt-4 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl max-w-lg mx-auto">
           <p className="text-purple-300 text-sm font-semibold">
-            🎵 Loading Professional Audio Stems...
+            🎵 Realistic Musical Loops
           </p>
           <p className="text-gray-400 text-xs mt-1">
-            Real studio recordings loaded directly from cloud storage
+            Professional-sounding 8-second loops created with Web Audio API
           </p>
         </div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
         <div className="lg:col-span-3">
-          <MixerBoard 
+          <MixerBoard
             isPlaying={isPlaying}
             masterVolume={masterVolume}
             audioContext={audioContext}
@@ -63,42 +63,70 @@ const MixerPage = () => {
           />
         </div>
         <div className="space-y-6">
-          <TransportControls 
+          <TransportControls
             onPlayStateChange={handlePlayStateChange}
             onAudioContextChange={handleAudioContextChange}
             onTimeChange={handleTimeChange}
           />
-          <MasterSection 
+          <MasterSection
             onVolumeChange={handleMasterVolumeChange}
             isPlaying={isPlaying}
           />
         </div>
       </div>
 
-      {/* Audio Sources Info */}
+      {/* Audio Stems Information */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.3 }}
         className="bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 p-6 mt-8"
       >
-        <h3 className="text-white font-semibold mb-4 text-center">Audio Stems Information</h3>
+        <h3 className="text-white font-semibold mb-4 text-center">Musical Loops</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
           <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-xl p-4">
-            <h4 className="text-red-400 font-semibold">Kick Drum</h4>
-            <p className="text-gray-400 text-sm">Professional kick drum track</p>
-          </div>
-          <div className="bg-gradient-to-r from-orange-500/20 to-yellow-500/20 rounded-xl p-4">
-            <h4 className="text-orange-400 font-semibold">Drum Overheads</h4>
-            <p className="text-gray-400 text-sm">Cymbal and room ambience</p>
+            <h4 className="text-red-400 font-semibold">Drums</h4>
+            <p className="text-gray-400 text-sm">Full kit with kick, snare, hi-hats</p>
+            <div className="text-xs text-gray-500 mt-1">120 BPM groove</div>
           </div>
           <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl p-4">
             <h4 className="text-blue-400 font-semibold">Bass</h4>
-            <p className="text-gray-400 text-sm">Deep bass line foundation</p>
+            <p className="text-gray-400 text-sm">Walking bass line in C major</p>
+            <div className="text-xs text-gray-500 mt-1">C-D-E-F progression</div>
           </div>
           <div className="bg-gradient-to-r from-pink-500/20 to-rose-500/20 rounded-xl p-4">
             <h4 className="text-pink-400 font-semibold">Vocal</h4>
-            <p className="text-gray-400 text-sm">Lead vocal performance</p>
+            <p className="text-gray-400 text-sm">Melodic vocal with vibrato</p>
+            <div className="text-xs text-gray-500 mt-1">Formant-rich tones</div>
+          </div>
+          <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl p-4">
+            <h4 className="text-green-400 font-semibold">Other (Strings)</h4>
+            <p className="text-gray-400 text-sm">String pad chord progression</p>
+            <div className="text-xs text-gray-500 mt-1">C-Dm-Em-F chords</div>
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div className="mt-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+          <h4 className="text-purple-300 font-semibold mb-2">🎛️ Mixing Tips:</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
+            <div>
+              <strong>EQ Guidelines:</strong>
+              <ul className="mt-1 space-y-1 text-xs">
+                <li>• Drums: Boost low (kick) and high (cymbals)</li>
+                <li>• Bass: Boost low-mids, cut highs</li>
+                <li>• Vocal: Boost presence (2-5kHz)</li>
+                <li>• Strings: Cut low-mids to make room</li>
+              </ul>
+            </div>
+            <div>
+              <strong>Panning:</strong>
+              <ul className="mt-1 space-y-1 text-xs">
+                <li>• Drums & Bass: Keep centered</li>
+                <li>• Vocal: Slight left or right</li>
+                <li>• Strings: Wide stereo spread</li>
+              </ul>
+            </div>
           </div>
         </div>
       </motion.div>

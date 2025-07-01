@@ -27,30 +27,6 @@ const ChannelStrip = ({ channel, isPlaying, masterVolume, audioContext, currentT
   const analyzerRef = useRef(null);
   const animationRef = useRef(null);
 
-  // Alternative download URLs and fallback local files
-  const audioFiles = {
-    kick: [
-      'https://drive.google.com/uc?export=download&id=1p5PSF2GyNvqlY7whBHjSaKACVlAg58zA',
-      'https://cors-anywhere.herokuapp.com/https://drive.google.com/uc?export=download&id=1p5PSF2GyNvqlY7whBHjSaKACVlAg58zA',
-      '/audio/kick.mp3' // Local fallback
-    ],
-    overheads: [
-      'https://drive.google.com/uc?export=download&id=15O_8KFR2lKx3K1tIfCyrnZCAZuJLWFKp',
-      'https://cors-anywhere.herokuapp.com/https://drive.google.com/uc?export=download&id=15O_8KFR2lKx3K1tIfCyrnZCAZuJLWFKp',
-      '/audio/overheads.mp3'
-    ],
-    bass: [
-      'https://drive.google.com/uc?export=download&id=13TNg52YyqaizXIImfRR8YTlfHFXHJ0ev',
-      'https://cors-anywhere.herokuapp.com/https://drive.google.com/uc?export=download&id=13TNg52YyqaizXIImfRR8YTlfHFXHJ0ev',
-      '/audio/bass.mp3'
-    ],
-    vocal: [
-      'https://drive.google.com/uc?export=download&id=1bC6bRgrbdRdUvW2qcgXhC11kSkdfTumT',
-      'https://cors-anywhere.herokuapp.com/https://drive.google.com/uc?export=download&id=1bC6bRgrbdRdUvW2qcgXhC11kSkdfTumT',
-      '/audio/vocal.mp3'
-    ]
-  };
-
   useEffect(() => {
     if (!audioContext) return;
 
@@ -82,8 +58,8 @@ const ChannelStrip = ({ channel, isPlaying, masterVolume, audioContext, currentT
     eqNodesRef.current = { high: highEQ, mid: midEQ, low: lowEQ };
     analyzerRef.current = analyzer;
 
-    // Load audio file
-    loadAudioFile();
+    // Create realistic audio immediately
+    createRealisticAudio();
 
     return () => {
       if (sourceRef.current) {
@@ -96,123 +72,156 @@ const ChannelStrip = ({ channel, isPlaying, masterVolume, audioContext, currentT
     };
   }, [audioContext, channel.type]);
 
-  const loadAudioFile = async () => {
+  const createRealisticAudio = async () => {
     if (!audioContext) return;
     
+    console.log(`🎵 Creating realistic ${channel.type} loop`);
     setIsLoading(true);
-    setLoadError(false);
-    setDebugInfo('Starting load...');
+    setDebugInfo('Creating loop...');
     
-    const urls = audioFiles[channel.type];
-    
-    for (let i = 0; i < urls.length; i++) {
-      try {
-        setDebugInfo(`Trying URL ${i + 1}/${urls.length}`);
-        console.log(`${channel.name}: Trying URL ${i + 1}:`, urls[i]);
-        
-        const response = await fetch(urls[i], {
-          mode: 'cors',
-          headers: {
-            'Accept': 'audio/*,*/*'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        setDebugInfo('Decoding audio...');
-        const arrayBuffer = await response.arrayBuffer();
-        
-        if (arrayBuffer.byteLength === 0) {
-          throw new Error('Empty audio file received');
-        }
-        
-        const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        setAudioBuffer(decodedBuffer);
-        setDebugInfo(`Loaded! ${decodedBuffer.duration.toFixed(1)}s`);
-        console.log(`✅ ${channel.name} loaded successfully - Duration: ${decodedBuffer.duration.toFixed(2)}s`);
-        setIsLoading(false);
-        return; // Success! Exit the loop
-        
-      } catch (error) {
-        console.warn(`❌ ${channel.name} URL ${i + 1} failed:`, error);
-        setDebugInfo(`URL ${i + 1} failed: ${error.message}`);
-        
-        if (i === urls.length - 1) {
-          // All URLs failed, use fallback
-          console.log(`🔄 ${channel.name}: All URLs failed, using fallback audio`);
-          setLoadError(true);
-          setDebugInfo('Using fallback');
-          createFallbackAudio();
-        }
-      }
-    }
-    
-    setIsLoading(false);
-  };
-
-  const createFallbackAudio = () => {
-    if (!audioContext) return;
-    
-    console.log(`🎵 Creating fallback audio for ${channel.name}`);
-    
-    // Create a more realistic fallback buffer
-    const duration = 4; // 4 seconds
+    // Create 4-bar loop (8 seconds at 120 BPM)
+    const duration = 8;
     const sampleRate = audioContext.sampleRate;
     const buffer = audioContext.createBuffer(2, duration * sampleRate, sampleRate);
+    const bpm = 120;
+    const beatLength = 60 / bpm; // 0.5 seconds per beat
     
-    // Generate different sounds for each channel
     for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
       const channelData = buffer.getChannelData(ch);
       
       switch (channel.type) {
-        case 'kick':
-          // Generate kick drum sound
+        case 'drums':
+          // Create full drum kit loop: kick, snare, hi-hats
           for (let i = 0; i < channelData.length; i++) {
             const t = i / sampleRate;
-            const beat = Math.floor(t * 2) % 4 === 0; // Every 2 seconds
-            if (beat && (t % 2) < 0.1) {
-              channelData[i] = Math.sin(2 * Math.PI * 60 * t) * Math.exp(-t % 2 * 20) * 0.5;
-            } else {
-              channelData[i] = 0;
+            const beatTime = (t % beatLength) / beatLength; // 0-1 within each beat
+            const beatNumber = Math.floor(t / beatLength) % 16; // 16 beats in 4 bars
+            
+            let sample = 0;
+            
+            // Kick drum on beats 1, 5, 9, 13 (every 4th beat)
+            if (beatNumber % 4 === 0 && beatTime < 0.1) {
+              const envelope = Math.exp(-beatTime * 20);
+              const kick = Math.sin(2 * Math.PI * 60 * beatTime) * envelope * 0.8;
+              const click = Math.sin(2 * Math.PI * 2000 * beatTime) * envelope * 0.3;
+              sample += kick + click;
             }
-          }
-          break;
-          
-        case 'overheads':
-          // Generate hi-hat/cymbal sounds
-          for (let i = 0; i < channelData.length; i++) {
-            const t = i / sampleRate;
-            const hit = Math.floor(t * 4) % 2 === 1; // Off-beats
-            if (hit && (t % 0.5) < 0.05) {
-              channelData[i] = (Math.random() * 2 - 1) * Math.exp(-(t % 0.5) * 40) * 0.3;
-            } else {
-              channelData[i] = 0;
+            
+            // Snare on beats 5, 13 (backbeat)
+            if ((beatNumber === 4 || beatNumber === 12) && beatTime < 0.15) {
+              const envelope = Math.exp(-beatTime * 15);
+              const snare = (Math.random() * 2 - 1) * envelope * 0.6;
+              const tone = Math.sin(2 * Math.PI * 200 * beatTime) * envelope * 0.4;
+              sample += snare + tone;
             }
+            
+            // Hi-hats on every beat
+            if (beatTime < 0.05) {
+              const envelope = Math.exp(-beatTime * 40);
+              const hihat = (Math.random() * 2 - 1) * envelope * 0.3;
+              sample += hihat;
+            }
+            
+            // Closed hi-hats on off-beats
+            if ((beatTime > 0.4 && beatTime < 0.45)) {
+              const envelope = Math.exp(-(beatTime - 0.4) * 50);
+              const closedHat = (Math.random() * 2 - 1) * envelope * 0.2;
+              sample += closedHat;
+            }
+            
+            channelData[i] = sample * 0.7;
           }
           break;
           
         case 'bass':
-          // Generate bass line
+          // Create walking bass line in C major
+          const bassNotes = [65.41, 73.42, 82.41, 87.31]; // C2, D2, E2, F2
           for (let i = 0; i < channelData.length; i++) {
             const t = i / sampleRate;
-            const freq = 110 + Math.sin(t * 0.5) * 20; // Varying bass note
-            channelData[i] = Math.sin(2 * Math.PI * freq * t) * 0.4;
+            const noteIndex = Math.floor(t / 2) % bassNotes.length; // Change note every 2 seconds
+            const freq = bassNotes[noteIndex];
+            
+            // Create rich bass tone with multiple harmonics
+            const fundamental = Math.sin(2 * Math.PI * freq * t) * 0.6;
+            const octave = Math.sin(2 * Math.PI * freq * 2 * t) * 0.3;
+            const fifth = Math.sin(2 * Math.PI * freq * 1.5 * t) * 0.2;
+            
+            // Add subtle envelope for rhythm
+            const beatTime = t % beatLength;
+            const envelope = beatTime < 0.1 ? 1 : 0.8;
+            
+            channelData[i] = (fundamental + octave + fifth) * envelope * 0.5;
           }
           break;
           
         case 'vocal':
-          // Generate vocal-like sound
+          // Create melodic vocal line with vibrato and formants
+          const vocalNotes = [261.63, 293.66, 329.63, 349.23]; // C4, D4, E4, F4
           for (let i = 0; i < channelData.length; i++) {
             const t = i / sampleRate;
-            const freq = 440 + Math.sin(t * 2) * 100; // Varying pitch
-            channelData[i] = Math.sin(2 * Math.PI * freq * t) * 0.3 * (0.5 + 0.5 * Math.sin(t * 8));
+            const phraseTime = t % 4; // 4-second phrases
+            
+            if (phraseTime < 3) { // Sing for 3 seconds, rest for 1
+              const noteIndex = Math.floor(phraseTime / 0.75) % vocalNotes.length;
+              const baseFreq = vocalNotes[noteIndex];
+              
+              // Add vibrato
+              const vibrato = Math.sin(2 * Math.PI * 5 * t) * 8;
+              const freq = baseFreq + vibrato;
+              
+              // Create formants for vowel sounds
+              const formant1 = Math.sin(2 * Math.PI * freq * t) * 0.4;
+              const formant2 = Math.sin(2 * Math.PI * freq * 2.4 * t) * 0.3;
+              const formant3 = Math.sin(2 * Math.PI * freq * 3.2 * t) * 0.2;
+              
+              // Breathing envelope
+              const breath = 0.7 + 0.3 * Math.sin(phraseTime * 2);
+              const attack = phraseTime < 0.1 ? phraseTime * 10 : 1;
+              
+              channelData[i] = (formant1 + formant2 + formant3) * breath * attack * 0.4;
+            } else {
+              channelData[i] = 0;
+            }
+          }
+          break;
+          
+        case 'other':
+          // Create pad/string section with chord progression
+          const chords = [
+            [261.63, 329.63, 392.00], // C major
+            [293.66, 369.99, 440.00], // D minor
+            [329.63, 415.30, 493.88], // E minor  
+            [349.23, 440.00, 523.25]  // F major
+          ];
+          
+          for (let i = 0; i < channelData.length; i++) {
+            const t = i / sampleRate;
+            const chordIndex = Math.floor(t / 2) % chords.length;
+            const chord = chords[chordIndex];
+            
+            let sample = 0;
+            
+            // Play each note in the chord
+            chord.forEach((freq, noteIndex) => {
+              const fundamental = Math.sin(2 * Math.PI * freq * t) * 0.3;
+              const octave = Math.sin(2 * Math.PI * freq * 0.5 * t) * 0.1; // Sub-octave
+              
+              // Add some movement with LFO
+              const lfo = 0.8 + 0.2 * Math.sin(2 * Math.PI * 0.3 * t);
+              
+              sample += (fundamental + octave) * lfo;
+            });
+            
+            // Soft attack envelope
+            const chordTime = (t % 2) / 2;
+            const envelope = chordTime < 0.1 ? chordTime * 10 : 1;
+            
+            channelData[i] = sample * envelope * 0.3;
           }
           break;
           
         default:
-          // Default tone
+          // Fallback tone
           for (let i = 0; i < channelData.length; i++) {
             const t = i / sampleRate;
             channelData[i] = Math.sin(2 * Math.PI * 440 * t) * 0.2;
@@ -221,7 +230,10 @@ const ChannelStrip = ({ channel, isPlaying, masterVolume, audioContext, currentT
     }
     
     setAudioBuffer(buffer);
-    console.log(`✅ ${channel.name} fallback audio created`);
+    setDebugInfo(`${channel.type.charAt(0).toUpperCase() + channel.type.slice(1)} ready!`);
+    setLoadError(false);
+    setIsLoading(false);
+    console.log(`✅ ${channel.name} realistic loop created`);
   };
 
   const createAudioSource = () => {
@@ -258,7 +270,7 @@ const ChannelStrip = ({ channel, isPlaying, masterVolume, audioContext, currentT
   useEffect(() => {
     // Update audio parameters
     if (gainNodeRef.current) {
-      const totalGain = (gain / 20) + (volume / 100) * (masterVolume / 100) * 0.5;
+      const totalGain = (gain / 20) + (volume / 100) * (masterVolume / 100) * 0.6;
       gainNodeRef.current.gain.value = muted ? 0 : totalGain;
     }
     
@@ -310,7 +322,7 @@ const ChannelStrip = ({ channel, isPlaying, masterVolume, audioContext, currentT
         
         // Calculate average level
         const average = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
-        setLevel(Math.min((average / 255) * 120, 100)); // Boost sensitivity
+        setLevel(Math.min((average / 255) * 150, 100)); // Boost sensitivity
       } else {
         setLevel(0);
       }
@@ -343,7 +355,11 @@ const ChannelStrip = ({ channel, isPlaying, masterVolume, audioContext, currentT
 
       {/* Debug Info */}
       <div className="mb-2 text-center">
-        <div className="text-xs text-blue-300 bg-blue-900/20 rounded px-2 py-1">
+        <div className={`text-xs rounded px-2 py-1 ${
+          isLoading ? 'text-yellow-300 bg-yellow-900/20' :
+          loadError ? 'text-orange-300 bg-orange-900/20' :
+          'text-green-300 bg-green-900/20'
+        }`}>
           {debugInfo}
         </div>
       </div>
@@ -477,16 +493,14 @@ const ChannelStrip = ({ channel, isPlaying, masterVolume, audioContext, currentT
       <div className="text-center">
         <div className={`text-xs font-semibold ${
           isLoading ? 'text-yellow-400' : 
-          loadError ? 'text-orange-400' :
           isPlaying && !muted && sourceRef.current ? 'text-green-400' : 'text-gray-500'
         }`}>
           {isLoading ? 'LOADING...' : 
-           loadError ? 'FALLBACK' :
            isPlaying && !muted && sourceRef.current ? 'PLAYING' : 'READY'}
         </div>
         {audioBuffer && (
           <div className="text-xs text-blue-400 mt-1">
-            {(audioBuffer.duration).toFixed(1)}s
+            {(audioBuffer.duration).toFixed(1)}s loop
           </div>
         )}
       </div>
